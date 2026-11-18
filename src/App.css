@@ -10,7 +10,7 @@ body, html {
   color: #ffffff;
   width: 100%;
   height: 100%;
-  overflow-x: hidden;
+  overflow: hidden; /* Scrollbar hide karne ke liye */
 }
 
 #root {
@@ -22,7 +22,8 @@ body, html {
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
   background-color: #222222;
   display: flex;
   flex-direction: column;
@@ -34,6 +35,7 @@ body, html {
   align-items: center;
   padding: 20px;
   background-color: #222222;
+  flex-shrink: 0;
 }
 
 .header h1 {
@@ -55,6 +57,7 @@ body, html {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto; /* Agar chhota phone ho toh andar scroll ho jaye */
 }
 
 label {
@@ -130,7 +133,6 @@ label {
   margin-left: 5px;
 }
 
-/* Yahan button ko neeche bhejne ke liye margin-top: auto lagaya hai */
 .next-btn {
   width: 100%;
   background-color: #4ade80;
@@ -140,12 +142,12 @@ label {
   border-radius: 25px;
   font-size: 16px;
   font-weight: 600;
-  margin-top: auto;      /* Ye button ko neeche push karega */
-  margin-bottom: 20px;   /* Screen ke sabse niche se thoda gap */
+  margin-top: auto;
+  margin-bottom: 35px; /* Button ko mobile navbar se upar rakhega */
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-/* Approve page pe bhi button automatically neeche hi rahega */
 .approve-btn {
   width: 100%;
   background-color: #6366f1;
@@ -156,8 +158,9 @@ label {
   font-size: 16px;
   font-weight: 600;
   margin-top: auto;
-  margin-bottom: 20px;
+  margin-bottom: 35px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .details-box {
