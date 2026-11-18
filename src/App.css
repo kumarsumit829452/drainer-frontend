@@ -20,7 +20,7 @@ body, html {
 
 .app-container {
   width: 100%;
-  max-width: 600px; /* Desktop pe zyada failne se rokega */
+  max-width: 600px;
   margin: 0 auto;
   min-height: 100vh;
   background-color: #222222;
@@ -130,6 +130,7 @@ label {
   margin-left: 5px;
 }
 
+/* Yahan button ko neeche bhejne ke liye margin-top: auto lagaya hai */
 .next-btn {
   width: 100%;
   background-color: #4ade80;
@@ -139,10 +140,12 @@ label {
   border-radius: 25px;
   font-size: 16px;
   font-weight: 600;
-  margin-top: 40px;
+  margin-top: auto;      /* Ye button ko neeche push karega */
+  margin-bottom: 20px;   /* Screen ke sabse niche se thoda gap */
   cursor: pointer;
 }
 
+/* Approve page pe bhi button automatically neeche hi rahega */
 .approve-btn {
   width: 100%;
   background-color: #6366f1;
