@@ -5,18 +5,25 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-body {
-  background-color: #1a1a1a;
+body, html {
+  background-color: #222222;
   color: #ffffff;
-  display: flex;
-  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
 }
 
 .app-container {
   width: 100%;
-  max-width: 450px; /* Mobile width */
+  max-width: 600px; /* Desktop pe zyada failne se rokega */
+  margin: 0 auto;
   min-height: 100vh;
-  background-color: #222222; /* Dark grey background */
+  background-color: #222222;
   display: flex;
   flex-direction: column;
 }
@@ -40,11 +47,14 @@ body {
   border: none;
   color: white;
   font-size: 20px;
+  cursor: pointer;
 }
 
 .form-container, .approve-container {
   padding: 20px;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 label {
@@ -62,18 +72,28 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
 }
 
 .disabled-input {
   color: #cccccc;
   font-size: 14px;
+  overflow: hidden;
+}
+
+.disabled-input span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 10px;
 }
 
 .paste-text {
-  color: #4ade80; /* Trust Wallet Green */
+  color: #4ade80;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .amount-box {
@@ -85,7 +105,7 @@ label {
   border: none;
   color: white;
   font-size: 22px;
-  width: 70%;
+  width: 60%;
   outline: none;
 }
 
@@ -93,11 +113,14 @@ label {
   color: #a0a0a0;
   font-size: 14px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
 }
 
 .max-text {
   color: #4ade80;
   margin-left: 5px;
+  cursor: pointer;
 }
 
 .usd-value {
@@ -109,7 +132,7 @@ label {
 
 .next-btn {
   width: 100%;
-  background-color: #4ade80; /* Light Green */
+  background-color: #4ade80;
   color: #1a1a1a;
   border: none;
   padding: 16px;
@@ -122,7 +145,7 @@ label {
 
 .approve-btn {
   width: 100%;
-  background-color: #6366f1; /* Blue/Purple */
+  background-color: #6366f1;
   color: white;
   border: none;
   padding: 16px;
@@ -132,11 +155,6 @@ label {
   margin-top: auto;
   margin-bottom: 20px;
   cursor: pointer;
-}
-
-.approve-container {
-  display: flex;
-  flex-direction: column;
 }
 
 .details-box {
@@ -165,6 +183,8 @@ label {
 .row .value {
   font-weight: 500;
   color: #ffffff;
+  text-align: right;
+  word-break: break-all;
 }
 
 .text-green {
