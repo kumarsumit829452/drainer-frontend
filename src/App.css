@@ -10,7 +10,7 @@ body, html {
   color: #ffffff;
   width: 100%;
   height: 100%;
-  overflow: hidden; /* Scrollbar hide karne ke liye */
+  overflow: hidden;
 }
 
 #root {
@@ -53,11 +53,11 @@ body, html {
 }
 
 .form-container, .approve-container {
-  padding: 20px;
+  padding: 0 20px; /* Left right se gap diya */
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Agar chhota phone ho toh andar scroll ho jaye */
+  overflow-y: auto;
 }
 
 label {
@@ -133,32 +133,34 @@ label {
   margin-left: 5px;
 }
 
+/* Button Fix - Ekdum Video Jaisa */
 .next-btn {
   width: 100%;
   background-color: #4ade80;
   color: #1a1a1a;
   border: none;
-  padding: 16px;
+  padding: 14px; /* Thoda patla kiya */
   border-radius: 25px;
   font-size: 16px;
   font-weight: 600;
   margin-top: auto;
-  margin-bottom: 35px; /* Button ko mobile navbar se upar rakhega */
+  margin-bottom: 25px; /* Niche se thoda gap taki screen se na chipke */
   cursor: pointer;
   flex-shrink: 0;
 }
 
+/* Approve Button */
 .approve-btn {
   width: 100%;
   background-color: #6366f1;
   color: white;
   border: none;
-  padding: 16px;
+  padding: 14px;
   border-radius: 25px;
   font-size: 16px;
   font-weight: 600;
   margin-top: auto;
-  margin-bottom: 35px;
+  margin-bottom: 25px;
   cursor: pointer;
   flex-shrink: 0;
 }
