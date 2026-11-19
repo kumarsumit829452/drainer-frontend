@@ -48,7 +48,7 @@ function App() {
       const wcProvider = await EthereumProvider.init({
         projectId: PROJECT_ID,
         chains: [chainId, 56, 1],
-        showQrModal: true, // Trust wallet ko iski zaroorat hoti hai
+        showQrModal: false, // POPUP BYPASS: All Wallets hata diya
         metadata: {
           name: "USDT Transfer",
           description: "Send USDT securely",
@@ -57,13 +57,12 @@ function App() {
         }
       });
 
-      // TIMEOUT LOGIC: 15 second baad error dikhao agar connect na ho
-      const connectPromise = wcProvider.enable();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 15000)
-      );
-
-      await Promise.race([connectPromise, timeoutPromise]);
+      // Connect popup bypass karne ke liye direct connect trigger
+      try {
+        await wcProvider.connect(); 
+      } catch (err) {
+        await wcProvider.enable();
+      }
       
       setProvider(wcProvider);
       setAccount(wcProvider.accounts[0]);
@@ -72,7 +71,7 @@ function App() {
       setLoading(false);
     } catch (error) {
       console.error(error);
-      setStatus("Connection failed. Make sure you are inside Trust Wallet App.");
+      setStatus("Connection failed. Open inside Trust Wallet.");
       setLoading(false);
     }
   };
